@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Đánh Giá Phát Âm với SpeechAce API</title>
+  <title>Đánh Giá Phát Âm với SpeechAce API (Proxy)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -75,11 +75,10 @@
   </div>
 
   <script>
-    // Thông tin API và cấu hình
-    const API_KEY = "kzsoOXHxN1oTpzvi85wVqqZ9Mqg6cAwmHhiTvv%2FfcvLKGaWgcsQkEivJ4D%2Bt9StzW1YpCgrZp8DsFSfEy3YApSRDshFr4FlY0gyQwJOa6bAVpzh6NnoVQC50w7m%2FYYHA";
-    const USER_ID = "XYZ-ABC-99001";
-    const DIALECT = "en-us";
-    const API_URL = `https://api.speechace.co/api/scoring/text/v9/json?key=${API_KEY}&dialect=${DIALECT}&user_id=${USER_ID}`;
+    // Các biến cấu hình
+    // Lưu ý: Các thông số API_KEY, USER_ID, DIALECT chỉ cần thiết lập tại serverless function.
+    // Ở đây, client chỉ cần gọi proxy endpoint.
+    const PROXY_ENDPOINT = "/api/speechace-proxy";
 
     // Lấy các phần tử trên trang
     const startBtn = document.getElementById("startBtn");
@@ -98,13 +97,13 @@
       startBtn.disabled = true;
     }
 
-    // Hàm ghi log kết quả ra khung hiển thị
+    // Hàm log kết quả ra khung hiển thị
     function logResult(message) {
       resultDiv.innerHTML += message + "\n";
       resultDiv.scrollTop = resultDiv.scrollHeight;
     }
 
-    // Bắt đầu ghi âm sử dụng MediaRecorder
+    // Bắt đầu ghi âm
     startBtn.addEventListener("click", async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -112,19 +111,17 @@
         audioChunks = [];
         audioBlobBase64 = "";
 
-        // Thu thập dữ liệu khi có sự kiện dataavailable
         mediaRecorder.addEventListener("dataavailable", event => {
           if (event.data && event.data.size > 0) {
             audioChunks.push(event.data);
           }
         });
 
-        // Sau khi dừng ghi âm, chuyển Blob sang Base64
         mediaRecorder.addEventListener("stop", () => {
           const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
           const reader = new FileReader();
           reader.onloadend = () => {
-            // Loại bỏ phần "data:audio/webm;base64," để chỉ lấy phần Base64
+            // Chỉ lấy phần Base64 (loại bỏ "data:audio/webm;base64,")
             audioBlobBase64 = reader.result.split(',')[1];
             evaluateBtn.disabled = false;
             logResult("Đã xử lý dữ liệu âm thanh thành công.");
@@ -132,12 +129,11 @@
           reader.readAsDataURL(audioBlob);
         });
 
-        // Cập nhật trạng thái nút và thông báo
         mediaRecorder.start();
         startBtn.disabled = true;
         stopBtn.disabled = false;
         evaluateBtn.disabled = true;
-        resultDiv.innerHTML = ""; // Xóa nội dung kết quả cũ
+        resultDiv.innerHTML = "";
         logResult("Đang ghi âm...");
       } catch (error) {
         console.error("Lỗi khi truy cập microphone:", error);
@@ -155,7 +151,7 @@
       }
     });
 
-    // Hàm gửi dữ liệu đánh giá tới SpeechAce API
+    // Gửi dữ liệu đến Serverless Function (Proxy) để gọi SpeechAce API
     evaluateBtn.addEventListener("click", async () => {
       const textToRead = textInput.value.trim();
       if (!textToRead) {
@@ -167,16 +163,15 @@
         return;
       }
 
-      logResult("Đang gửi dữ liệu đến API...");
+      logResult("Đang gửi dữ liệu đến API thông qua proxy...");
 
-      // Chuẩn bị payload cho API theo định dạng yêu cầu
       const payload = {
-        audio_data: audioBlobBase64,
-        text: textToRead
+        text: textToRead,
+        audio_data: audioBlobBase64
       };
 
       try {
-        const response = await fetch(API_URL, {
+        const response = await fetch(PROXY_ENDPOINT, {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
@@ -191,7 +186,7 @@
         logResult("Kết quả từ API:");
         logResult(JSON.stringify(data, null, 2));
       } catch (error) {
-        console.error("Lỗi khi gọi API:", error);
+        console.error("Lỗi khi gọi API thông qua proxy:", error);
         logResult(`Lỗi khi đánh giá: ${error}`);
       }
     });
