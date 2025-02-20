@@ -3,86 +3,198 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Đánh Giá Phát Âm với SpeechAce API v9</title>
+  <title>Đánh Giá Phát Âm với SpeechAce API</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    button { padding: 10px 20px; margin: 5px; }
-    input[type="text"] { width: 100%; padding: 8px; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f7f7f7;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #fff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      border-radius: 8px;
+    }
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+    textarea {
+      width: 100%;
+      height: 100px;
+      font-size: 16px;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      resize: vertical;
+    }
+    button {
+      font-size: 16px;
+      padding: 10px 20px;
+      margin-right: 10px;
+      margin-bottom: 10px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      background-color: #007BFF;
+      color: #fff;
+    }
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    #result {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f0f0f0;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      font-family: Consolas, monospace;
+      max-height: 400px;
+      overflow-y: auto;
+    }
   </style>
 </head>
 <body>
-  <h1>Đánh Giá Phát Âm với SpeechAce API v9</h1>
-  <p>Nhập văn bản tham khảo (đoạn văn bạn dự định đọc) và sử dụng nút ghi âm để ghi lại lời đọc của bạn:</p>
-  
-  <label for="referenceText">Văn bản tham khảo:</label>
-  <input type="text" id="referenceText" value="The quick brown fox jumps over the lazy dog">
-  
-  <br><br>
-  <button id="recordBtn">Bắt đầu ghi âm</button>
-  <button id="stopBtn" disabled>Dừng ghi âm</button>
-  
-  <h3>Kết quả đánh giá:</h3>
-  <pre id="result"></pre>
-  
+  <div class="container">
+    <h2>Đánh Giá Phát Âm</h2>
+    <p>Nhập nội dung cần đọc:</p>
+    <textarea id="textInput" placeholder="Nhập nội dung cần đọc..."></textarea>
+    
+    <div>
+      <button id="startBtn">Bắt đầu ghi âm</button>
+      <button id="stopBtn" disabled>Dừng ghi âm</button>
+      <button id="evaluateBtn" disabled>Đánh giá</button>
+    </div>
+    
+    <div id="result"></div>
+  </div>
+
   <script>
+    // Thông tin API và cấu hình
+    const API_KEY = "kzsoOXHxN1oTpzvi85wVqqZ9Mqg6cAwmHhiTvv%2FfcvLKGaWgcsQkEivJ4D%2Bt9StzW1YpCgrZp8DsFSfEy3YApSRDshFr4FlY0gyQwJOa6bAVpzh6NnoVQC50w7m%2FYYHA";
+    const USER_ID = "XYZ-ABC-99001";
+    const DIALECT = "en-us";
+    const API_URL = `https://api.speechace.co/api/scoring/text/v9/json?key=${API_KEY}&dialect=${DIALECT}&user_id=${USER_ID}`;
+
+    // Lấy các phần tử trên trang
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const evaluateBtn = document.getElementById("evaluateBtn");
+    const resultDiv = document.getElementById("result");
+    const textInput = document.getElementById("textInput");
+
     let mediaRecorder;
     let audioChunks = [];
+    let audioBlobBase64 = "";
 
-    // Bắt đầu ghi âm
-    async function startRecording() {
+    // Kiểm tra hỗ trợ ghi âm
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert("Trình duyệt của bạn không hỗ trợ ghi âm.");
+      startBtn.disabled = true;
+    }
+
+    // Hàm ghi log kết quả ra khung hiển thị
+    function logResult(message) {
+      resultDiv.innerHTML += message + "\n";
+      resultDiv.scrollTop = resultDiv.scrollHeight;
+    }
+
+    // Bắt đầu ghi âm sử dụng MediaRecorder
+    startBtn.addEventListener("click", async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         mediaRecorder = new MediaRecorder(stream);
         audioChunks = [];
-        
+        audioBlobBase64 = "";
+
+        // Thu thập dữ liệu khi có sự kiện dataavailable
         mediaRecorder.addEventListener("dataavailable", event => {
-          audioChunks.push(event.data);
+          if (event.data && event.data.size > 0) {
+            audioChunks.push(event.data);
+          }
         });
-        
+
+        // Sau khi dừng ghi âm, chuyển Blob sang Base64
+        mediaRecorder.addEventListener("stop", () => {
+          const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            // Loại bỏ phần "data:audio/webm;base64," để chỉ lấy phần Base64
+            audioBlobBase64 = reader.result.split(',')[1];
+            evaluateBtn.disabled = false;
+            logResult("Đã xử lý dữ liệu âm thanh thành công.");
+          };
+          reader.readAsDataURL(audioBlob);
+        });
+
+        // Cập nhật trạng thái nút và thông báo
         mediaRecorder.start();
-        document.getElementById('recordBtn').disabled = true;
-        document.getElementById('stopBtn').disabled = false;
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        evaluateBtn.disabled = true;
+        resultDiv.innerHTML = ""; // Xóa nội dung kết quả cũ
+        logResult("Đang ghi âm...");
       } catch (error) {
-        alert("Không thể truy cập micro: " + error);
+        console.error("Lỗi khi truy cập microphone:", error);
+        alert("Không thể truy cập microphone. Vui lòng kiểm tra cài đặt trình duyệt.");
       }
-    }
+    });
 
-    // Dừng ghi âm và gửi dữ liệu đến API SpeechAce
-    function stopRecording() {
-      mediaRecorder.stop();
-      document.getElementById('recordBtn').disabled = false;
-      document.getElementById('stopBtn').disabled = true;
+    // Dừng ghi âm
+    stopBtn.addEventListener("click", () => {
+      if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        logResult("Ghi âm đã dừng.");
+      }
+    });
 
-      mediaRecorder.addEventListener("stop", async () => {
-        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-        // Tạo đối tượng FormData chứa file âm và văn bản tham khảo
-        const formData = new FormData();
-        formData.append('audio', audioBlob, 'recording.wav');
-        const referenceText = document.getElementById('referenceText').value;
-        formData.append('text', referenceText);
-        
-        // Sử dụng endpoint SpeechAce với API Key mới
-        const apiKey = "kzsoOXHxN1oTpzvi85wVqqZ9Mqg6cAwmHhiTvv%2FfcvLKGaWgcsQkEivJ4D%2Bt9StzW1YpCgrZp8DsFSfEy3YApSRDshFr4FlY0gyQwJOa6bAVpzh6NnoVQC50w7m%2FYYHA";
-        const apiEndpoint = "https://api.speechace.co/api/scoring/text/v9/json";
+    // Hàm gửi dữ liệu đánh giá tới SpeechAce API
+    evaluateBtn.addEventListener("click", async () => {
+      const textToRead = textInput.value.trim();
+      if (!textToRead) {
+        alert("Vui lòng nhập nội dung cần đọc.");
+        return;
+      }
+      if (!audioBlobBase64) {
+        alert("Chưa có dữ liệu âm thanh. Vui lòng ghi âm trước.");
+        return;
+      }
 
-        // Tạo URL với API Key và các tham số
-        const apiURL = `${apiEndpoint}?key=${apiKey}&dialect=en-us&user_id=XYZ-ABC-99001`;
+      logResult("Đang gửi dữ liệu đến API...");
 
-        try {
-          const response = await fetch(apiURL, {
-            method: 'POST',
-            body: formData
-          });
-          const resultData = await response.json();
-          document.getElementById('result').textContent = JSON.stringify(resultData, null, 2);
-        } catch (error) {
-          document.getElementById('result').textContent = "Lỗi khi gửi dữ liệu: " + error;
+      // Chuẩn bị payload cho API theo định dạng yêu cầu
+      const payload = {
+        audio_data: audioBlobBase64,
+        text: textToRead
+      };
+
+      try {
+        const response = await fetch(API_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
         }
-      });
-    }
-
-    document.getElementById('recordBtn').addEventListener('click', startRecording);
-    document.getElementById('stopBtn').addEventListener('click', stopRecording);
+        const data = await response.json();
+        logResult("Kết quả từ API:");
+        logResult(JSON.stringify(data, null, 2));
+      } catch (error) {
+        console.error("Lỗi khi gọi API:", error);
+        logResult(`Lỗi khi đánh giá: ${error}`);
+      }
+    });
   </script>
 </body>
 </html>
