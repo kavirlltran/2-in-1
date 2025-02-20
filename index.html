@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Đánh Giá Phát Âm với SpeechAce API v9</title>
+  <title>Đánh Giá Phát Âm với SpeechAce API v9.9</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
     button { padding: 10px 20px; margin: 5px; }
@@ -11,7 +11,7 @@
   </style>
 </head>
 <body>
-  <h1>Đánh Giá Phát Âm với SpeechAce API v9</h1>
+  <h1>Đánh Giá Phát Âm với SpeechAce API v9.9</h1>
   <p>Nhập văn bản tham khảo (đoạn văn bạn dự định đọc) và sử dụng nút ghi âm để ghi lại lời đọc của bạn:</p>
   
   <label for="referenceText">Văn bản tham khảo:</label>
@@ -47,7 +47,7 @@
       }
     }
 
-    // Dừng ghi âm và gửi dữ liệu đến API SpeechAce v9
+    // Dừng ghi âm và gửi dữ liệu đến API SpeechAce v9.9
     function stopRecording() {
       mediaRecorder.stop();
       document.getElementById('recordBtn').disabled = false;
@@ -55,14 +55,14 @@
 
       mediaRecorder.addEventListener("stop", async () => {
         const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-        // Tạo đối tượng FormData để gửi file âm và văn bản tham khảo
+        // Tạo đối tượng FormData chứa file âm và văn bản tham khảo
         const formData = new FormData();
         formData.append('audio', audioBlob, 'recording.wav');
         const referenceText = document.getElementById('referenceText').value;
         formData.append('text', referenceText);
         
-        // URL endpoint mới của SpeechAce API v9 với tham số ví dụ (hãy thay YOUR_API_KEY bằng khóa API thực)
-        const apiURL = 'https://api.speechace.co/scoring/text/v9/json?key=YOUR_API_KEY&dialect=us';
+        // Endpoint mới của SpeechAce API v9.9 (hãy thay YOUR_API_KEY bằng khóa API thực của bạn)
+        const apiURL = 'https://api.speechace.co/api/scoring/text/v9.9/json?key=YOUR_API_KEY&dialect=us';
 
         try {
           const response = await fetch(apiURL, {
