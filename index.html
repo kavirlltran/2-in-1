@@ -61,8 +61,12 @@
         const referenceText = document.getElementById('referenceText').value;
         formData.append('text', referenceText);
         
-        // Sử dụng endpoint mới với API Key, dialect và user_id được cung cấp
-        const apiURL = 'https://api.speechace.co/api/scoring/text/v9/json?key=kzsoOXHxN1oTpzvi85wVqqZ9Mqg6cAwmHhiTvv%2FfcvLKGaWgcsQkEivJ4D%2Bt9StzW1YpCgrZp8DsFSfEy3YApSRDshFr4FlY0gyQwJOa6bAVpzh6NnoVQC50w7m%2FYYHA&dialect=en-us&user_id=XYZ-ABC-99001';
+        // Sử dụng endpoint SpeechAce với API Key mới
+        const apiKey = "kzsoOXHxN1oTpzvi85wVqqZ9Mqg6cAwmHhiTvv%2FfcvLKGaWgcsQkEivJ4D%2Bt9StzW1YpCgrZp8DsFSfEy3YApSRDshFr4FlY0gyQwJOa6bAVpzh6NnoVQC50w7m%2FYYHA";
+        const apiEndpoint = "https://api.speechace.co/api/scoring/text/v9/json";
+
+        // Tạo URL với API Key và các tham số
+        const apiURL = `${apiEndpoint}?key=${apiKey}&dialect=en-us&user_id=XYZ-ABC-99001`;
 
         try {
           const response = await fetch(apiURL, {
